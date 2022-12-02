@@ -175,25 +175,185 @@ func TestUpdateCategoryFailed(t *testing.T) {
 }
 
 func TestGetCategorySuccess(t *testing.T) {
+	db := setupTestDB()
+	truncateCategory(db)
+
+	tx, _ := db.Begin()
+	categoryRepository := repository.NewCategoryRepository()
+	category := categoryRepository.Save(context.Background(), tx, domain.Category{
+		Name: "Gadget1",
+	})
+	tx.Commit()
+
+	router := setupRouter(db)
+	request := httptest.NewRequest(http.MethodGet, "http://localhost:3000/api/categories/"+strconv.Itoa(category.Id), nil)
+	request.Header.Add("X-API-Key", "rahasia")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 200, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+	json.Unmarshal(body, &responseBody)
+	fmt.Println(responseBody)
+
+	assert.Equal(t, 200, int(responseBody["code"].(float64)))
+	assert.Equal(t, "OK", responseBody["status"])
+	assert.Equal(t, category.Id, int(responseBody["data"].(map[string]interface{})["id"].(float64)))
+	assert.Equal(t, category.Name, responseBody["data"].(map[string]interface{})["name"])
 
 }
 
 func TestGetCategoryFailed(t *testing.T) {
+	db := setupTestDB()
+	truncateCategory(db)
+
+	router := setupRouter(db)
+	request := httptest.NewRequest(http.MethodGet, "http://localhost:3000/api/categories/404", nil)
+	request.Header.Add("X-API-Key", "rahasia")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 404, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+	json.Unmarshal(body, &responseBody)
+	fmt.Println(responseBody)
+
+	assert.Equal(t, 404, int(responseBody["code"].(float64)))
+	assert.Equal(t, "NOT FOUND", responseBody["status"])
 
 }
 
 func TestDeleteCategorySuccess(t *testing.T) {
+	db := setupTestDB()
+	truncateCategory(db)
 
+	tx, _ := db.Begin()
+	categoryRepository := repository.NewCategoryRepository()
+	category := categoryRepository.Save(context.Background(), tx, domain.Category{
+		Name: "Gadget1",
+	})
+	tx.Commit()
+
+	router := setupRouter(db)
+	request := httptest.NewRequest(http.MethodDelete, "http://localhost:3000/api/categories/"+strconv.Itoa(category.Id), nil)
+	request.Header.Add("X-API-Key", "rahasia")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 200, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+	json.Unmarshal(body, &responseBody)
+	fmt.Println(responseBody)
+
+	assert.Equal(t, 200, int(responseBody["code"].(float64)))
+	assert.Equal(t, "OK", responseBody["status"])
 }
 
 func TestDeleteCategoryFailed(t *testing.T) {
+	db := setupTestDB()
+	truncateCategory(db)
 
+	router := setupRouter(db)
+	request := httptest.NewRequest(http.MethodDelete, "http://localhost:3000/api/categories/404", nil)
+	request.Header.Add("X-API-Key", "rahasia")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 404, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+	json.Unmarshal(body, &responseBody)
+	fmt.Println(responseBody)
+
+	assert.Equal(t, 404, int(responseBody["code"].(float64)))
+	assert.Equal(t, "NOT FOUND", responseBody["status"])
 }
 
 func TestListCategoriesSuccess(t *testing.T) {
+	db := setupTestDB()
+	truncateCategory(db)
 
+	tx, _ := db.Begin()
+	categoryRepository := repository.NewCategoryRepository()
+	category := categoryRepository.Save(context.Background(), tx, domain.Category{
+		Name: "Gadget1",
+	})
+	category2 := categoryRepository.Save(context.Background(), tx, domain.Category{
+		Name: "Gadget2",
+	})
+	tx.Commit()
+
+	router := setupRouter(db)
+	request := httptest.NewRequest(http.MethodGet, "http://localhost:3000/api/categories", nil)
+	request.Header.Add("X-API-Key", "rahasia")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 200, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+
+	json.Unmarshal(body, &responseBody)
+	fmt.Println(responseBody)
+
+	assert.Equal(t, 200, int(responseBody["code"].(float64)))
+	assert.Equal(t, "OK", responseBody["status"])
+
+	var categories = responseBody["data"].([]interface{})
+	categoryResult1 := categories[0].(map[string]interface{})
+	categoryResult2 := categories[1].(map[string]interface{})
+
+	assert.Equal(t, category.Id, int(categoryResult1["id"].(float64)))
+	assert.Equal(t, category.Name, categoryResult1["name"])
+
+	assert.Equal(t, category2.Id, int(categoryResult2["id"].(float64)))
+	assert.Equal(t, category2.Name, categoryResult2["name"])
 }
 
 func TestUnauthorized(t *testing.T) {
+	db := setupTestDB()
+	truncateCategory(db)
 
+	router := setupRouter(db)
+	request := httptest.NewRequest(http.MethodGet, "http://localhost:3000/api/categories", nil)
+	request.Header.Add("X-API-Key", "")
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	assert.Equal(t, 401, response.StatusCode)
+
+	body, _ := io.ReadAll(response.Body)
+	var responseBody map[string]interface{}
+
+	json.Unmarshal(body, &responseBody)
+	fmt.Println(responseBody)
+
+	assert.Equal(t, 401, int(responseBody["code"].(float64)))
+	assert.Equal(t, "UNAUTHORIZED", responseBody["status"])
 }
